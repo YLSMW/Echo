@@ -14,24 +14,29 @@ const BN = require("bn.js");
 const main = async () => {
 
     // args[0]: Program ID
-    // args[1]: Vec<u8> written into buffer account,in form of num1,num2,...,numn
+    // args[1]: Authority ID
     var args = process.argv.slice(2);
     const programId = new PublicKey(args[0]);
-    const uservec = Buffer.from(args[1].split(",").map(Number));
-
 
     // Connect to cluster
     const connection = new Connection("http://localhost:8899", "confirmed");
 
-    // Generate a new user keypair and airdrop SOL, this account is feepayer
-    const userAccount = new Keypair();
-    let userAccountPubkey = userAccount.publicKey;
-    console.log("Requesting SOL for user...");
-    const userAirdropSignature = await connection.requestAirdrop(userAccountPubkey, LAMPORTS_PER_SOL * 2);
-    await connection.confirmTransaction(userAirdropSignature);
-    console.log("Done");
+    // get authority account, fee payer
+    if (args.length > 1) {
+        console.log("Found Authority address");
+        const authorityID = new PublicKey(args[1]);
+    } else {
+        const authority = new Keypair();
+        let authorityID = authority.publicKey; 
+        console.log("Requesting SOL for authority...");
+        const authorityAirdropSignature = await connection.requestAirdrop(authorityID, LAMPORTS_PER_SOL * 2);
+        await connection.confirmTransaction(authorityAirdropSignature);
+        console.log("Done");      
+    }
+
 
     let tx = new Transaction();
+    // generate the authorized_buffer account
     let signers = [userAccount];
     const bufferAccount = new Keypair();
     let bufferAccountPubkey = bufferAccount.publicKey;

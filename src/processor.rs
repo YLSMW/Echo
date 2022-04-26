@@ -29,14 +29,14 @@ impl Processor {
                 msg!("Instruction: Echo");
                 Self::process_echo_instruction(program_id, accounts, data)
             },
-/*             EchoInstruction::InitializeAuthorizedEcho {
+             EchoInstruction::InitializeAuthorizedEcho {
                 buffer_seed,
                 buffer_size, 
             } => {
                 msg!("Instruction: InitializeAuthorizedEcho");
-                Self::initialize_authorized_echo(accounts, program_id)
+                Self::initialize_authorized_echo(program_id, accounts, buffer_seed, buffer_size)
             },
-            EchoInstruction::AuthorizedEcho{ data } => {
+/*           EchoInstruction::AuthorizedEcho{ data } => {
                 msg!("Instruction: AuthorizedEcho");
                 Self::authorized_echo(accounts, data, program_id)                
             },
@@ -84,7 +84,15 @@ impl Processor {
         };
         Ok(())
     }
+    fn initialize_authorized_echo(
+        _program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        buffer_seed: u64,
+        buffer_size: usize, 
+    ) -> ProgramResult {
 
+        Ok(())
+    }
 
 }
 

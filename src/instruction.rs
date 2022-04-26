@@ -7,12 +7,12 @@ pub enum EchoInstruction {
     Echo {
         data: Vec<u8>,
     },
-/*     // Highly Recommended
+     // Highly Recommended
     InitializeAuthorizedEcho {
         buffer_seed: u64,
         buffer_size: usize,
     },
-    // Highly Recommended
+/*    // Highly Recommended
     AuthorizedEcho {
         data: Vec<u8>,
     },
