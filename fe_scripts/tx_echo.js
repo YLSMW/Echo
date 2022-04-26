@@ -58,8 +58,15 @@ const main = async () => {
         signers.push(bufferAccount);
         tx.add(createIx);
     }
+    // This is so ugly. 
+    len = new ArrayBuffer(4);
+    len_1 = new DataView(len);
+    len_1.setUint32(0, uservec.length, true);
 
+    data =  Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
+    //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
     let writeIx = new TransactionInstruction({
+        programId: programId,
         keys: [
             {
                 pubkey: bufferAccountPubkey,
@@ -67,11 +74,10 @@ const main = async () => {
                 isWritable: true,
             }
         ],
-        programId: programId,
-        data: Buffer.concat([Buffer.from(new Uint8Array([0])), uservec]),
+        data: data,
     });
 
-    // tx.add(writeIx);
+    tx.add(writeIx);
     let txid = await sendAndConfirmTransaction(connection, tx, signers, {
         skipPreflight: true,
         preflightCommitment: "confirmed",
