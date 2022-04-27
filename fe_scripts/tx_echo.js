@@ -44,6 +44,8 @@ const getKeypair = (name) =>
     });
 
 
+
+
 const main = async () => {
     // args[0]: ix id: 0 echo; 1 initialize authorized echo; ...
     // args[1]: Program ID
@@ -141,38 +143,59 @@ const main = async () => {
         console.log("Done");
 
         // create PDA for AuthorizedEcho
-        if (args[3] == 1) {
-            let buffer_seed = args[4];
-            console.log("Found buffer address");
-            //bufferAccountPubkey = new PublicKey(args[5]);
-            let bufferSeed = Buffer.from(['authority' + authorityPubkey.toString() + buffer_seed].toString());
-            bufferAccountPubkey = PublicKey.findProgramAddress(
-                bufferSeed,
-                programId
-            );
-        } else {
-            // Generate a new account as buffer account
-            console.log("Generating new buffer address...");
+        let buffer_seed = args[3];
+        let bufferSeedArray = [Buffer.from('authority'), Buffer.from(authorityPubkey.toBytes()), Buffer.from(buffer_seed.split(",").map(Number))];
+        [bufferAccountPubkey, bumpSeed] = await PublicKey.findProgramAddress(
+            bufferSeedArray,
+            programId
+        );
+        console.log("bufferAccountPubkey is : ", bufferAccountPubkey.toBytes());
 
-            const createAuthorizedEchoBufferAccountIx = SystemProgram.createAccount({
-                programId: programId,
-                space: 153, // 1 + 8 + 4 + 140
-                lamports: await connection.getMinimumBalanceForRentExemption(153),
-                fromPubkey: authorityPubkey,
-                newAccountPubkey: bufferAccountPubkey.publicKey,
-            });
+         ix_createAuthorizedBufferAccount = SystemProgram.createAccount({
+            fromPubkey: authorityPubkey,
+            newAccountPubkey: bufferAccountPubkey,
+            space : 153, // 1 + 8 + 4 + 140
+            lamports: await connection.getMinimumBalanceForRentExemption(153),
+            programId: programId
+        }); 
+
+        let tx = new Transaction();
+        let signers = [authorityAccount];
+        data = Buffer.concat([
+            Buffer.from(new Uint8Array([1])),
+            Buffer.from(buffer_seed.split(",").map(Number)),
+            Buffer.from(new Uint8Array([153]))
+        ]);
+
+        let createAndInitialteAuthorizedBufferAccountIx = new TransactionInstruction({
+            programId: programId,
+            keys: [
+                { pubkey: authorityPubkey, isSigner: true, isWritable: false },
+                { pubkey: bufferAccountPubkey, isSigner: false, isWritable: true }
+            ],
+            data: data
+        });
+
+        tx.add(createAndInitialteAuthorizedBufferAccountIx);
+
+        let txid = await sendAndConfirmTransaction(connection, tx, signers, {
+            skipPreflight: true,
+            preflightCommitment: "confirmed",
+            confirmation: "confirmed",
+        });
+        data = (await connection.getAccountInfo(bufferAccountPubkey)).data;        
 
 
 
 
-            signers.push(bufferAccount);
-            tx.add(createIx);
-        }
+            
+
+
+    }
 
 
 
 
-    };
 };
 
 main().then(() => {
