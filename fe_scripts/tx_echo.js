@@ -69,7 +69,7 @@ const main = async () => {
         // Save userAccount keypair.
 
         // writePublicKey(userAccountPubkey, "userAccount");
-        
+
         // writePrivateKey(userAccount.secretKey, "userAccount");
 
         // userAccountPubkey = getKeypair("userAccount");
@@ -100,7 +100,11 @@ const main = async () => {
             tx.add(createIx);
         }
 
-        let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(new Uint32Array([uservec.length])), uservec])
+        // This is so ugly. 
+        len = new ArrayBuffer(4);
+        len_1 = new DataView(len);
+        len_1.setUint32(0, uservec.length, true);
+        let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
         //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
         let writeIx = new TransactionInstruction({
             programId: programId,
@@ -134,7 +138,7 @@ const main = async () => {
         console.log("Requesting SOL for authority...");
         const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
         await connection.confirmTransaction(authorityPubkeyAirdropSignature);
-        console.log("Done");  
+        console.log("Done");
 
         // create PDA for AuthorizedEcho
         if (args[3] == 1) {
@@ -145,7 +149,7 @@ const main = async () => {
             bufferAccountPubkey = PublicKey.findProgramAddress(
                 bufferSeed,
                 programId
-              );
+            );
         } else {
             // Generate a new account as buffer account
             console.log("Generating new buffer address...");
@@ -156,16 +160,16 @@ const main = async () => {
                 lamports: await connection.getMinimumBalanceForRentExemption(153),
                 fromPubkey: authorityPubkey,
                 newAccountPubkey: bufferAccountPubkey.publicKey,
-              });
+            });
 
-              
+
 
 
             signers.push(bufferAccount);
             tx.add(createIx);
         }
-        
-        
+
+
 
 
     };
