@@ -1,19 +1,13 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
-    account_info::{AccountInfo,next_account_info},
+    account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
-    program_error::ProgramError,
     msg,
+    program_error::ProgramError,
     pubkey::Pubkey,
 };
-use borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::{
-    instruction::EchoInstruction, 
-    error::EchoError,
-    state::Echo,
-};
-
-
+use crate::{error::EchoError, instruction::EchoInstruction, state::Echo};
 
 pub struct Processor;
 
@@ -22,48 +16,45 @@ impl Processor {
         // let data_0 = [0, 6, 0, 0, 0, 21, 22, 23, 24, 25, 26];
         // assert_eq!(data_0,data);
         let instruction = EchoInstruction::try_from_slice(&data)
-            .map_err(|_| ProgramError::InvalidInstructionData)?;     
- 
+            .map_err(|_| ProgramError::InvalidInstructionData)?;
         match instruction {
             EchoInstruction::Echo { data } => {
                 msg!("Instruction: Echo");
                 Self::process_echo_instruction(program_id, accounts, data)
-            },
-             EchoInstruction::InitializeAuthorizedEcho {
+            }
+            EchoInstruction::InitializeAuthorizedEcho {
                 buffer_seed,
-                buffer_size, 
+                buffer_size,
             } => {
                 msg!("Instruction: InitializeAuthorizedEcho");
                 Self::initialize_authorized_echo(program_id, accounts, buffer_seed, buffer_size)
-            },
-/*           EchoInstruction::AuthorizedEcho{ data } => {
+            }
+            /*           EchoInstruction::AuthorizedEcho{ data } => {
                 msg!("Instruction: AuthorizedEcho");
-                Self::authorized_echo(accounts, data, program_id)                
+                Self::authorized_echo(accounts, data, program_id)
             },
             EchoInstruction::InitializeVendingMachineEcho{
                 price,
                 buffer_size,
             } => {
                 msg!("Instruction: InitializeVendingMachineEcho");
-                Self::initialize_vending_machine_echo(accounts, program_id)                
+                Self::initialize_vending_machine_echo(accounts, program_id)
             },
             EchoInstruction::VendingMachineEcho { data } => {
                 msg!("Instruction: VendingMachineEcho");
                 Self::vending_machine_echo(data)
             }, */
-        } 
+        }
     }
 
     fn process_echo_instruction(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
         data: Vec<u8>,
-
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         // msg!("right until now 1");
         let echo_buffer = next_account_info(account_info_iter)?;
-        
         // msg!("right until now 2");
 
         let mut data_dst = Echo::try_from_slice(&echo_buffer.data.borrow())?;
@@ -85,14 +76,23 @@ impl Processor {
         Ok(())
     }
     fn initialize_authorized_echo(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
         buffer_seed: u64,
-        buffer_size: usize, 
+        buffer_size: usize,
     ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let authority = next_account_info(account_info_iter)?;
+        let (authorized_buffer_key, bump_seed) = Pubkey::find_program_address(
+            &[
+                
+                authority.key.as_ref(),
+                &buffer_seed.to_le_bytes(),
+            ],
+            program_id,
+        );
 
         Ok(())
     }
-
 }
-

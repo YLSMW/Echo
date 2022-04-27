@@ -6,8 +6,9 @@ pub struct Echo {
 }
 #[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
 pub struct AuthorizedEcho {
+    pub bump_seed: u8,
     pub buffer_seed: u64,
-    pub buffer_size: usize,
+    pub data: Vec<u8>,
 }
 
 
