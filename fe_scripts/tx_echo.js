@@ -67,9 +67,10 @@ const main = async () => {
         console.log("Done");
 
         // Save userAccount keypair.
-        writePublicKey(userAccountPubkey, "userAccount");
+
+        // writePublicKey(userAccountPubkey, "userAccount");
         
-        writePrivateKey(userAccount.secretKey, "userAccount");
+        // writePrivateKey(userAccount.secretKey, "userAccount");
 
         // userAccountPubkey = getKeypair("userAccount");
 
@@ -98,11 +99,8 @@ const main = async () => {
             signers.push(bufferAccount);
             tx.add(createIx);
         }
-        // This is still ugly. 
-        let len = new DataView(new ArrayBuffer(4));
-        len.setUint32(0, uservec.length, true);
 
-        let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
+        let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(new Uint32Array([uservec.length])), uservec])
         //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
         let writeIx = new TransactionInstruction({
             programId: programId,
@@ -127,6 +125,47 @@ const main = async () => {
         console.log("Buffer Key:", bufferAccountPubkey.toBase58());
 
     } else if (ix_ID == 1) {
+        // args[2]: name for authority keypair in key folder
+        const authorityName = args[2].toString();
+        const authorityAccount = getKeypair(authorityName);
+        let authorityPubkey = authorityAccount.publicKey;
+
+        // funding authorityAccount
+        console.log("Requesting SOL for authority...");
+        const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
+        await connection.confirmTransaction(authorityPubkeyAirdropSignature);
+        console.log("Done");  
+
+        // create PDA for AuthorizedEcho
+        if (args[3] == 1) {
+            let buffer_seed = args[4];
+            console.log("Found buffer address");
+            //bufferAccountPubkey = new PublicKey(args[5]);
+            let bufferSeed = Buffer.from(['authority' + authorityPubkey.toString() + buffer_seed].toString());
+            bufferAccountPubkey = PublicKey.findProgramAddress(
+                bufferSeed,
+                programId
+              );
+        } else {
+            // Generate a new account as buffer account
+            console.log("Generating new buffer address...");
+
+            const createAuthorizedEchoBufferAccountIx = SystemProgram.createAccount({
+                programId: programId,
+                space: 153, // 1 + 8 + 4 + 140
+                lamports: await connection.getMinimumBalanceForRentExemption(153),
+                fromPubkey: authorityPubkey,
+                newAccountPubkey: bufferAccountPubkey.publicKey,
+              });
+
+              
+
+
+            signers.push(bufferAccount);
+            tx.add(createIx);
+        }
+        
+        
 
 
     };
