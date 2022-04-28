@@ -37,11 +37,12 @@ impl Processor {
             } => {
                 msg!("Instruction: InitializeAuthorizedEcho");
                 Self::initialize_authorized_echo(program_id, accounts, buffer_seed, buffer_size)
-            } /*           EchoInstruction::AuthorizedEcho{ data } => {
-                  msg!("Instruction: AuthorizedEcho");
-                  Self::authorized_echo(accounts, data, program_id)
+            }
+            EchoInstruction::AuthorizedEcho{ data } => {
+                msg!("Instruction: AuthorizedEcho");
+                Self::authorized_echo(program_id, accounts, data)
               },
-              EchoInstruction::InitializeVendingMachineEcho{
+            /*  EchoInstruction::InitializeVendingMachineEcho{
                   price,
                   buffer_size,
               } => {
@@ -98,7 +99,7 @@ impl Processor {
             program_id,
         );
         let rent = Rent::default();
-        
+
         let create_authorized_buffer_account_ix = system_instruction::create_account(
             authority.key,
             &authorized_buffer_key,
@@ -130,7 +131,7 @@ impl Processor {
             .iter()
             .copied()
             .chain(buffer_seed.to_le_bytes().iter().copied())
-            .chain([0, 0, 0, 0].iter().copied())
+            .chain(0u64.to_le_bytes().iter().copied())
             .collect();
 
         let data = AuthorizedEcho::try_from_slice(&data)?;
@@ -140,4 +141,53 @@ impl Processor {
 
         Ok(())
     }
+    fn authorized_echo(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        data: Vec<u8>
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let authority = next_account_info(account_info_iter)?;
+        let authorized_buffer = next_account_info(account_info_iter)?;
+        let mut data_dst = AuthorizedEcho::try_from_slice(&authorized_buffer.data.borrow_mut())?;
+
+        // Check Authority
+
+        let bump_seed_ = data_dst.data[0];
+        let buffer_seed = &data_dst.data[1..9] ;
+        let (authorized_buffer_key, bump_seed) = Pubkey::find_program_address(
+            &[
+                b"authority",
+                authority.key.as_ref(),
+                buffer_seed,
+            ],
+            program_id,
+        );
+        if bump_seed != bump_seed_ || authorized_buffer_key != *authorized_buffer.key || authority.is_signer {
+            msg!("Authority Check Failed");
+            return Err(EchoError::AuthorityCheckFailed.into());
+        }
+        msg!("Authority Check");
+
+        match data_dst.data[9..].iter().position(|&x| x != 0) {
+            None => {
+                // let mut data = data;
+                if data.len() > 140 {
+                    data_dst.data.extend(140u64.to_le_bytes().iter().copied());
+                    data_dst.data.extend(data[..140].iter());
+                } else {
+                    data_dst.data.extend(data.len().to_le_bytes().iter().copied());
+                    data_dst.data.extend(data.iter());                    
+                }
+                msg!("data written into echo_buffer account");
+                data_dst.serialize(&mut *authorized_buffer.data.borrow_mut())?;
+            }
+            Some(_usize) => {
+                msg!("Buffer account already used!");
+                return Err(EchoError::NonZeroDataFoundInBuffer.into());
+            }
+        };
+        Ok(())
+    }
+
 }

@@ -13,6 +13,9 @@ pub enum EchoError {
     #[error("Non Zero Data Found In Buffer")]
     NonZeroDataFoundInBuffer,
 
+    #[error("Authority Check Failed")]
+    AuthorityCheckFailed,   
+
 }
 
 

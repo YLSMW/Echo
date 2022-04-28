@@ -187,12 +187,8 @@ const main = async () => {
         });
         data = (await connection.getAccountInfo(bufferAccountPubkey)).data;        
 
-
-
-
-            
-
-
+    } else if (ix_ID == 2) {
+        
     }
 
 
