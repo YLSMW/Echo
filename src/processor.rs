@@ -114,13 +114,18 @@ impl Processor {
 
         let mut data_dst = Echo::try_from_slice(&authorized_buffer.data.borrow())?;  
         // let data = [bump_seed, buffer_seed.to_le_bytes(), buffer_size]
+        let data : Vec<u8> = 
+            [bump_seed].iter().copied().chain(
+            buffer_seed.to_le_bytes().iter().copied().chain(
+            (u32::try_from(buffer_size).unwrap()).to_le_bytes()
+            )).collect();
         match data_dst.data[13..].iter().position(|&x| x != 0) {
             None => {
                 let mut data = data;
                 data.resize(data_dst.data.len(), 0);
                 data_dst.data = data.try_into().unwrap();
                 msg!("data written into echo_buffer account");
-                data_dst.serialize(&mut *echo_buffer.data.borrow_mut())?;
+                data_dst.serialize(&mut *authorized_buffer.data.borrow_mut())?;
             }
             Some(_usize) => {
                 msg!("Buffer account already used!");

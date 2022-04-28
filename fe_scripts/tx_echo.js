@@ -106,6 +106,9 @@ const main = async () => {
         len = new ArrayBuffer(4);
         len_1 = new DataView(len);
         len_1.setUint32(0, uservec.length, true);
+        d = uservec.length;
+        b = new Uint32Array([d]);
+        a = Buffer.from(new Uint8Array(b.toBytes()));
         let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
         //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
         let writeIx = new TransactionInstruction({
