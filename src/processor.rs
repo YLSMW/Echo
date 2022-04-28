@@ -3,14 +3,18 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
-    program::{invoke, invoke_signed},
+    program::invoke_signed,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_instruction,
-    sysvar::{rent::Rent, Sysvar},
+    sysvar::rent::Rent,
 };
 
-use crate::{error::EchoError, instruction::EchoInstruction, state::Echo};
+use crate::{
+    error::EchoError,
+    instruction::EchoInstruction,
+    state::{AuthorizedEcho, Echo},
+};
 
 pub struct Processor;
 
@@ -18,6 +22,8 @@ impl Processor {
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         // let data_0 = [0, 6, 0, 0, 0, 21, 22, 23, 24, 25, 26];
         // assert_eq!(data_0,data);
+
+        msg!("data : {:?}", data);
         let instruction = EchoInstruction::try_from_slice(&data)
             .map_err(|_| ProgramError::InvalidInstructionData)?;
         match instruction {
@@ -80,9 +86,9 @@ impl Processor {
         buffer_size: usize,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-
         let authority = next_account_info(account_info_iter)?;
         let authorized_buffer = next_account_info(account_info_iter)?;
+        let system_program_account = next_account_info(account_info_iter)?;
         let (authorized_buffer_key, bump_seed) = Pubkey::find_program_address(
             &[
                 b"authority",
@@ -91,9 +97,8 @@ impl Processor {
             ],
             program_id,
         );
-
-        let rent = &Rent::from_account_info(next_account_info(account_info_iter)?)?;
-
+        let rent = Rent::default();
+        
         let create_authorized_buffer_account_ix = system_instruction::create_account(
             authority.key,
             &authorized_buffer_key,
@@ -106,33 +111,32 @@ impl Processor {
         invoke_signed(
             &create_authorized_buffer_account_ix,
             &[
+                system_program_account.clone(),
                 authority.clone(),
                 authorized_buffer.clone(),
             ],
-            &[&[&b"authority"[..],authority.key.as_ref(), &[bump_seed]]],
+            &[&[
+                &b"authority"[..],
+                authority.key.as_ref(),
+                &buffer_seed.to_le_bytes(),
+                &[bump_seed],
+            ]],
         )?;
 
-        let mut data_dst = Echo::try_from_slice(&authorized_buffer.data.borrow())?;  
-        // let data = [bump_seed, buffer_seed.to_le_bytes(), buffer_size]
-        let data : Vec<u8> = 
-            [bump_seed].iter().copied().chain(
-            buffer_seed.to_le_bytes().iter().copied().chain(
-            (u32::try_from(buffer_size).unwrap()).to_le_bytes()
-            )).collect();
-        match data_dst.data[13..].iter().position(|&x| x != 0) {
-            None => {
-                let mut data = data;
-                data.resize(data_dst.data.len(), 0);
-                data_dst.data = data.try_into().unwrap();
-                msg!("data written into echo_buffer account");
-                data_dst.serialize(&mut *authorized_buffer.data.borrow_mut())?;
-            }
-            Some(_usize) => {
-                msg!("Buffer account already used!");
-                return Err(EchoError::NonZeroDataFoundInBuffer.into());
-            }
-        };
+        msg!("Authorized BufferAccount Created...");
+        let data_dst = &mut *authorized_buffer.data.borrow_mut();
 
+        let data: Vec<u8> = [bump_seed]
+            .iter()
+            .copied()
+            .chain(buffer_seed.to_le_bytes().iter().copied())
+            .chain([0, 0, 0, 0].iter().copied())
+            .collect();
+
+        let data = AuthorizedEcho::try_from_slice(&data)?;
+
+        data.serialize(data_dst)?;
+        msg!("data head written into echo_buffer account");
 
         Ok(())
     }

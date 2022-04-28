@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "tx_echo_0": "node tx_echo.js 0 EhXXhzzSnWkPvWsbPpPYhMDMWwu7bLRU4BFRzQ2pv4A 50,40,20,30,10,0",
+        "tx_echo_1": "node tx_echo.js 1 EhXXhzzSnWkPvWsbPpPYhMDMWwu7bLRU4BFRzQ2pv4A userAccount 192,101,110,120,255,1,0,54"
     },
     "author": "",
     "license": "ISC",

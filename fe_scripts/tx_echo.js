@@ -106,9 +106,6 @@ const main = async () => {
         len = new ArrayBuffer(4);
         len_1 = new DataView(len);
         len_1.setUint32(0, uservec.length, true);
-        d = uservec.length;
-        b = new Uint32Array([d]);
-        a = Buffer.from(new Uint8Array(b.toBytes()));
         let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
         //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
         let writeIx = new TransactionInstruction({
@@ -124,7 +121,7 @@ const main = async () => {
         });
 
         tx.add(writeIx);
-        let txid = await sendAndConfirmTransaction(connection, tx, signers, {
+        await sendAndConfirmTransaction(connection, tx, signers, {
             skipPreflight: true,
             preflightCommitment: "confirmed",
             confirmation: "confirmed",
@@ -152,7 +149,7 @@ const main = async () => {
             bufferSeedArray,
             programId
         );
-        console.log("bufferAccountPubkey is : ", bufferAccountPubkey.toBytes());
+        console.log("bufferAccountPubkey is : ", bufferAccountPubkey.toBase58());
 
          ix_createAuthorizedBufferAccount = SystemProgram.createAccount({
             fromPubkey: authorityPubkey,
@@ -167,21 +164,23 @@ const main = async () => {
         data = Buffer.concat([
             Buffer.from(new Uint8Array([1])),
             Buffer.from(buffer_seed.split(",").map(Number)),
-            Buffer.from(new Uint8Array([153]))
+            Buffer.from(new Uint8Array([153, 0, 0, 0, 0, 0, 0, 0]))
         ]);
+        
 
         let createAndInitialteAuthorizedBufferAccountIx = new TransactionInstruction({
             programId: programId,
             keys: [
                 { pubkey: authorityPubkey, isSigner: true, isWritable: false },
-                { pubkey: bufferAccountPubkey, isSigner: false, isWritable: true }
+                { pubkey: bufferAccountPubkey, isSigner: false, isWritable: true },
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false}//这一行是解决bug的
             ],
             data: data
         });
-
+        console.log("SystemProgram is : ", SystemProgram.programId.toBytes());
         tx.add(createAndInitialteAuthorizedBufferAccountIx);
 
-        let txid = await sendAndConfirmTransaction(connection, tx, signers, {
+        await sendAndConfirmTransaction(connection, tx, signers, {
             skipPreflight: true,
             preflightCommitment: "confirmed",
             confirmation: "confirmed",
