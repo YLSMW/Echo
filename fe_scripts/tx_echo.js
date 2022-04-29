@@ -15,26 +15,26 @@ const fs = require("fs");
 
 const writePublicKey = (publicKey, name) => {
     fs.writeFileSync(
-        `/home/yalasia1102/Echo-protocol/keys/${name}_pub.json`,
+        `../keys/${name}_pub.json`,
         JSON.stringify(publicKey.toString())
     );
 };
 
 const writePrivateKey = (PrivateKey, name) => {
     fs.writeFileSync(
-        `/home/yalasia1102/Echo-protocol/keys/${name}.json`,
+        `../keys/${name}.json`,
         JSON.stringify(Array.from(PrivateKey))
     );
 };
 
 const getPublicKey = (name) =>
     new PublicKey(
-        JSON.parse(fs.readFileSync(`/home/yalasia1102/Echo-protocol/keys/${name}_pub.json`))
+        JSON.parse(fs.readFileSync(`../keys/${name}_pub.json`))
     );
 
 const getPrivateKey = (name) =>
     Uint8Array.from(
-        JSON.parse(fs.readFileSync(`/home/yalasia1102/Echo-protocol/keys/${name}.json`))
+        JSON.parse(fs.readFileSync(`../keys/${name}.json`))
     );
 
 const getKeypair = (name) =>
@@ -70,9 +70,9 @@ const main = async () => {
 
         // Save userAccount keypair.
 
-        // writePublicKey(userAccountPubkey, "userAccount");
+        writePublicKey(userAccountPubkey, "userAccount");
 
-        // writePrivateKey(userAccount.secretKey, "userAccount");
+        writePrivateKey(userAccount.secretKey, "userAccount");
 
         // userAccountPubkey = getKeypair("userAccount");
 
@@ -104,8 +104,8 @@ const main = async () => {
 
         // This is so ugly. 
         len = new ArrayBuffer(4);
-        len_1 = new DataView(len);
-        len_1.setUint32(0, uservec.length, true);
+        new DataView(len).setUint32(0, uservec.length, true);
+
         let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
         //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
         let writeIx = new TransactionInstruction({
@@ -175,10 +175,11 @@ const main = async () => {
             keys: [
                 { pubkey: authorityPubkey, isSigner: true, isWritable: false },
                 { pubkey: bufferAccountPubkey, isSigner: false, isWritable: true },
-                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false}//这一行是解决bug的
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
             ],
             data: data
         });
+        writePublicKey(bufferAccountPubkey, "authorizedBufferAccount")
         tx.add(createAndInitialteAuthorizedBufferAccountIx);
 
         await sendAndConfirmTransaction(connection, tx, signers, {
@@ -192,16 +193,42 @@ const main = async () => {
         const authorityName = args[2].toString();
         const authorityAccount = getKeypair(authorityName);
         let authorityPubkey = authorityAccount.publicKey;
-
-
+        let bufferAccountPubkey = getPublicKey("authorizedBufferAccount");
         // funding authorityAccount
-       
-        if (await connection.getBalance(authorityPubkey) < 200 * LAMPORTS_PER_SOL) {
+        if (await connection.getBalance(authorityPubkey) < LAMPORTS_PER_SOL) {
             console.log("Requesting SOL for authority...");
             const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
             await connection.confirmTransaction(authorityPubkeyAirdropSignature);
             console.log("Done");
         }
+
+        let uservec = Buffer.from(args[3].split(",").map(Number));
+        userveclen = new ArrayBuffer(4);
+        new DataView(userveclen).setUint32(0, uservec.length, true);
+        let data = Buffer.concat([
+            Buffer.from(new Uint8Array([2])),
+            Buffer.from(userveclen),
+            uservec,
+        ]);
+
+
+        tx = new Transaction();
+        let signers = [authorityAccount]
+        let writeToAuthorizedBufferAccountIx = new TransactionInstruction({
+            programId: programId,
+            keys: [
+                { pubkey: authorityPubkey, isSigner: true, isWritable: false },
+                { pubkey: bufferAccountPubkey, isSigner: false, isWritable: true },
+            ],
+            data: data
+        });
+        tx.add(writeToAuthorizedBufferAccountIx);
+        await sendAndConfirmTransaction(connection, tx, signers, {
+            skipPreflight: true,
+            preflightCommitment: "confirmed",
+            confirmation: "confirmed",
+        });
+
 
 
 
