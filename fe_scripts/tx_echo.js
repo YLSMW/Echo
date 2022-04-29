@@ -137,10 +137,12 @@ const main = async () => {
         let authorityPubkey = authorityAccount.publicKey;
 
         // funding authorityAccount
-        console.log("Requesting SOL for authority...");
-        const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
-        await connection.confirmTransaction(authorityPubkeyAirdropSignature);
-        console.log("Done");
+        if (await connection.getBalance(authorityPubkey) < LAMPORTS_PER_SOL) {
+            console.log("Requesting SOL for authority...");
+            const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
+            await connection.confirmTransaction(authorityPubkeyAirdropSignature);
+            console.log("Done");
+        }
 
         // create PDA for AuthorizedEcho
         let buffer_seed = args[3];
@@ -177,7 +179,6 @@ const main = async () => {
             ],
             data: data
         });
-        console.log("SystemProgram is : ", SystemProgram.programId.toBytes());
         tx.add(createAndInitialteAuthorizedBufferAccountIx);
 
         await sendAndConfirmTransaction(connection, tx, signers, {
@@ -188,7 +189,24 @@ const main = async () => {
         data = (await connection.getAccountInfo(bufferAccountPubkey)).data;        
 
     } else if (ix_ID == 2) {
+        const authorityName = args[2].toString();
+        const authorityAccount = getKeypair(authorityName);
+        let authorityPubkey = authorityAccount.publicKey;
+
+
+        // funding authorityAccount
+       
+        if (await connection.getBalance(authorityPubkey) < 200 * LAMPORTS_PER_SOL) {
+            console.log("Requesting SOL for authority...");
+            const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
+            await connection.confirmTransaction(authorityPubkeyAirdropSignature);
+            console.log("Done");
+        }
+
+
+
         
+
     }
 
 

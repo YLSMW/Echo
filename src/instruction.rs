@@ -12,11 +12,11 @@ pub enum EchoInstruction {
         buffer_seed: u64,
         buffer_size: usize,
     },
-/*    // Highly Recommended
+    // Highly Recommended
     AuthorizedEcho {
         data: Vec<u8>,
     },
-    // Optional
+/*    // Optional
     InitializeVendingMachineEcho {
         // Number of tokens required change the buffer
         price: u64,
