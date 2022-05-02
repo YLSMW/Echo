@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
+    "type": "module",
     "scripts": {
         "tx_echo_0": "node tx_echo.js 0 EhXXhzzSnWkPvWsbPpPYhMDMWwu7bLRU4BFRzQ2pv4A 50,40,20,30,10,0",
         "tx_echo_1": "node tx_echo.js 1 EhXXhzzSnWkPvWsbPpPYhMDMWwu7bLRU4BFRzQ2pv4A userAccount 192,101,110,120,255,1,0,54",
@@ -21,10 +22,12 @@
         "eslint-plugin-unused-imports": "^1.1.5",
         "prettier": "^2.4.1",
         "typescript": "^4.4.3"
-      },
-      "dependencies": {
+    },
+    "dependencies": {
         "@solana/spl-token": "^0.1.8",
         "@solana/web3.js": "^1.29.1",
+        "babel-core": "^6.26.3",
+        "babel-preset-env": "^1.7.0",
         "bn.js": "^5.2.0"
-      }
+    }
 }

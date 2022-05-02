@@ -1,3 +1,9 @@
+// utils.js
+
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import fs from 'fs';
+
+
 export const writePublicKey = (publicKey, name) => {
     fs.writeFileSync(
         `../keys/${name}_pub.json`,
@@ -29,7 +35,14 @@ export const getKeypair = (name) =>
     });
 
 export const fileExists = (path) => {
-        let fso = new ActiveXObject("Scripting.FileSystemObject");
-        return fso.FileExists(path);
-    };
+    return fs.existsSync(path);
+};
 
+export const getTokenBalance = async (
+    pubkey,
+    connection
+) => {
+    return parseInt(
+        (await connection.getTokenAccountBalance(pubkey)).value.amount
+    );
+};

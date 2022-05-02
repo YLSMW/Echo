@@ -39,13 +39,15 @@ const setupMint = async (
 
 const main = async () => {
 
-    
+    // Connect to cluster
+    const connection = new Connection("http://localhost:8899", "confirmed");
+
     if (fileExists(`../keys/userAccount.json`)) {
         console.log("using existing user info");
-        const userKeypair = getKeypair("userAccount");        
+        var userKeypair = getKeypair("userAccount");        
     } else {
         console.log("creating new user account...");
-        const userKeypair = new Keypair();
+        var userKeypair = new Keypair();
         console.log("Requesting SOL for user...");
         await connection.requestAirdrop(userKeypair.publicKey, LAMPORTS_PER_SOL * 2);
         // Save userAccount keypair.
@@ -55,18 +57,16 @@ const main = async () => {
 
     if (fileExists(`../keys/tokenClientAccount.json`)) {
         console.log("using existing token client info");
-        const userKeypair = getKeypair("tokenClientAccount");        
+        var clientKeypair = getKeypair("tokenClientAccount");        
     } else {
         console.log("creating new token client account...");
-        const userKeypair = new Keypair();
+        var clientKeypair = new Keypair();
         console.log("Requesting SOL for token client...");
-        await connection.requestAirdrop(userPublicKey, LAMPORTS_PER_SOL * 2);
+        await connection.requestAirdrop(clientKeypair.publicKey, LAMPORTS_PER_SOL * 2);
         // Save userAccount keypair.
-        writePublicKey(userKeypair.publicKey, "tokenClientAccount");
-        writePrivateKey(userKeypair.secretKey, "tokenClientAccount");
+        writePublicKey(clientKeypair.publicKey, "tokenClientAccount");
+        writePrivateKey(clientKeypair.secretKey, "tokenClientAccount");
     }
-
-    const connection = new Connection("http://localhost:8899", "confirmed");
 
     const [mintX, userTokenAccount] = await setupMint(
         "VMT",

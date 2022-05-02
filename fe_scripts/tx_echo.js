@@ -1,9 +1,5 @@
 import { Connection, sendAndConfirmTransaction, Keypair, Transaction, SystemProgram, PublicKey, TransactionInstruction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-import BN from "bn.js";
-
-import fs from "fs";
-
 import { getKeypair, getPublicKey, writePublicKey, writePrivateKey } from "./utils.js";
 
 
@@ -64,7 +60,7 @@ const main = async () => {
         }
 
         // This is so ugly. 
-        len = new ArrayBuffer(4);
+        let len = new ArrayBuffer(4);
         new DataView(len).setUint32(0, uservec.length, true);
 
         let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
