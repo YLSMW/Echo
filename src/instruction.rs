@@ -16,15 +16,15 @@ pub enum EchoInstruction {
     AuthorizedEcho {
         data: Vec<u8>,
     },
-/*    // Optional
+    // Optional
     InitializeVendingMachineEcho {
         // Number of tokens required change the buffer
         price: u64,
         buffer_size: usize,
     },
     // Optional
-    VendingMachineEcho {
+   VendingMachineEcho {
         data: Vec<u8>,
-    }, */
+    }, 
 }
 

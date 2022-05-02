@@ -1,49 +1,10 @@
-const {
-    Connection,
-    sendAndConfirmTransaction,
-    Keypair,
-    Transaction,
-    SystemProgram,
-    PublicKey,
-    TransactionInstruction,
-    LAMPORTS_PER_SOL,
-} = require("@solana/web3.js");
+import { Connection, sendAndConfirmTransaction, Keypair, Transaction, SystemProgram, PublicKey, TransactionInstruction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-const BN = require("bn.js");
+import BN from "bn.js";
 
-const fs = require("fs");
+import fs from "fs";
 
-const writePublicKey = (publicKey, name) => {
-    fs.writeFileSync(
-        `../keys/${name}_pub.json`,
-        JSON.stringify(publicKey.toString())
-    );
-};
-
-const writePrivateKey = (PrivateKey, name) => {
-    fs.writeFileSync(
-        `../keys/${name}.json`,
-        JSON.stringify(Array.from(PrivateKey))
-    );
-};
-
-const getPublicKey = (name) =>
-    new PublicKey(
-        JSON.parse(fs.readFileSync(`../keys/${name}_pub.json`))
-    );
-
-const getPrivateKey = (name) =>
-    Uint8Array.from(
-        JSON.parse(fs.readFileSync(`../keys/${name}.json`))
-    );
-
-const getKeypair = (name) =>
-    new Keypair({
-        publicKey: getPublicKey(name).toBytes(),
-        secretKey: getPrivateKey(name),
-    });
-
-
+import { getKeypair, getPublicKey, writePublicKey, writePrivateKey } from "./utils.js";
 
 
 const main = async () => {
@@ -169,7 +130,6 @@ const main = async () => {
             Buffer.from(new Uint8Array([153, 0, 0, 0, 0, 0, 0, 0]))
         ]);
         
-
         let createAndInitialteAuthorizedBufferAccountIx = new TransactionInstruction({
             programId: programId,
             keys: [
@@ -211,7 +171,6 @@ const main = async () => {
             uservec,
         ]);
 
-
         tx = new Transaction();
         let signers = [authorityAccount]
         let writeToAuthorizedBufferAccountIx = new TransactionInstruction({
@@ -228,17 +187,7 @@ const main = async () => {
             preflightCommitment: "confirmed",
             confirmation: "confirmed",
         });
-
-
-
-
-        
-
     }
-
-
-
-
 };
 
 main().then(() => {
