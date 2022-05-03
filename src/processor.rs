@@ -19,7 +19,7 @@ use spl_token::{
 use crate::{
     error::EchoError,
     instruction::EchoInstruction,
-    state::{AuthorizedEcho, Echo},
+    state::{VendingMachineEcho, AuthorizedEcho, Echo},
 };
 
 pub struct Processor;
@@ -174,7 +174,7 @@ impl Processor {
             msg!("Authority Check Failed");
             return Err(EchoError::AuthorityCheckFailed.into());
         }
-        msg!("Authority Check");
+        msg!("Authority Check Done");
 
         let mut vec_len_data = [0u8; 4];
         vec_len_data.clone_from_slice(&buffer_data[9..13]);
@@ -229,8 +229,8 @@ impl Processor {
         let create_vending_machine_buffer_account_ix = system_instruction::create_account(
             payer.key,
             &vending_machine_buffer_pubkey,
-            rent.minimum_balance(buffer_size),
-            buffer_size.try_into().unwrap(),
+            rent.minimum_balance(buffer_size + 9),
+            (buffer_size + 9).try_into().unwrap(),
             program_id,
         );
 
@@ -244,7 +244,7 @@ impl Processor {
             ],
             &[&[
                 &b"vending_machine"[..],
-                payer.key.as_ref(),
+                vending_machine_mint.key.as_ref(),
                 &price.to_le_bytes(),
                 &[bump_seed],
             ]],
@@ -253,9 +253,7 @@ impl Processor {
         msg!("VendingMachine BufferAccount Created...");
         let data_dst = &mut *vending_machine_buffer.data.borrow_mut();
 
-        let data: Vec<u8> = [bump_seed]
-            .iter()
-            .copied()
+        let data: Vec<u8> = [bump_seed].iter().copied()
             .chain(price.to_le_bytes().iter().copied())
             .chain(0u32.to_le_bytes().iter().copied())
             .collect();
@@ -277,18 +275,20 @@ impl Processor {
         let user = next_account_info(account_info_iter)?;
         let user_token = next_account_info(account_info_iter)?;
         let vending_machine_mint = next_account_info(account_info_iter)?;
-        let token_program = next_account_info(account_info_iter)?;
-
+        let token_program_account = next_account_info(account_info_iter)?;
+        let system_token_program = next_account_info(account_info_iter)?;
+        let mut buffer_data = vending_machine_buffer.data.borrow_mut();
+        let bump_seed = buffer_data[0];
+        let price = &buffer_data[1..9];
         // Check Authority
         msg!("Vender Machine and Payer Check...");
         {
             let buffer_data = vending_machine_buffer.data.borrow_mut();
-            let bump_seed_ = buffer_data[0];
-            let price_ = &buffer_data[1..9];
-            let price = &data[..8];
-            msg!("bump_seed : {:?}; price : {:?};", bump_seed_, price_);
 
-            let (vending_machine_buffer_pubkuy, bump_seed) = Pubkey::find_program_address(
+            let price_ = &data[..8];
+            msg!("bump_seed : {:?}; price : {:?};", bump_seed, price_);
+
+            let (vending_machine_buffer_pubkuy, bump_seed_) = Pubkey::find_program_address(
                 &[b"vending_machine", vending_machine_mint.key.as_ref(), price],
                 program_id,
             );
@@ -299,13 +299,13 @@ impl Processor {
                 return Err(EchoError::AuthorityCheckFailed.into());
             }
 
-            if !user.is_signer || token_program.is_signer {
+            if !user.is_signer || token_program_account.is_signer {
                 msg!("Vending Machine Check Failed : singer missing");
                 return Err(EchoError::AuthorityCheckFailed.into());
             }
             let user_token_account_info =
                 Account::unpack_from_slice(&user_token.data.borrow_mut()[..])?;
-            if *user.key != user_token_account_info {
+            if *user.key != user_token_account_info.owner {
                 msg!("Payer and Token Account Mismatched");
                 return Err(EchoError::AuthorityCheckFailed.into());
             }
@@ -320,37 +320,65 @@ impl Processor {
         };
         msg!("Vender Machine and Payer validated.");
 
-        /* if
+        // Pay
+        let create_token_burn_ix = burn(
+            token_program_account.key,
+            user_token.key,
+            vending_machine_mint.key,
+            token_program_account.key,
+            &[&token_program_account.key],
+            u64::from_le_bytes(price.try_into().unwrap()),
+        )?;
 
-        msg!("Authority Check");
+        msg!("Conduct Payment...");
+        invoke_signed(
+            &create_token_burn_ix,
+            &[
+                system_token_program.clone(),
+                token_program_account.clone(),
+                user_token.clone(),
+                vending_machine_mint.clone(),
+                token_program_account.clone(),
+            ],
+            &[&[
+                &b"vending_machine"[..],
+                vending_machine_mint.key.as_ref(),
+                price,
+                &[bump_seed],
+            ]],
+        )?;        
 
+        // Service
         let mut vec_len_data = [0u8; 4];
         vec_len_data.clone_from_slice(&buffer_data[9..13]);
         let vec_len = u32::from_le_bytes(vec_len_data);
 
         let data_dst_data = &buffer_data[..13 + vec_len as usize];
-        let mut data_dst = AuthorizedEcho::try_from_slice(data_dst_data)?;
+        let mut data_dst = VendingMachineEcho::try_from_slice(data_dst_data)?;
 
         match buffer_data[9..].iter().position(|&x| x != 0) {
             None => {
                 // let mut data = data;
                 if data.len() > 140 {
-                    // data_dst.data.extend(140u32.to_le_bytes().iter().copied());  // a silly logic mistake
                     data_dst.data.extend(data[..140].iter());
                 } else {
-                    // data_dst.data.extend((data.len() as u32).to_le_bytes().iter().copied());
                     data_dst.data.extend(data.iter());
                 }
                 msg!("data written into echo_buffer account");
-
                 //let buffer_data = &authorized_buffer.data.borrow_mut(); // This is hard. need to review more thoroughly
                 data_dst.serialize(&mut *buffer_data)?;
             }
             Some(_usize) => {
-                msg!("Buffer account already used!");
-                return Err(EchoError::NonZeroDataFoundInBuffer.into());
+                msg!("reset Buffer Account and Write data");
+                data_dst.data = vec!();
+                if data.len() > 140 {
+                    data_dst.data.extend(data[..140].iter());
+                } else {
+                    data_dst.data.extend(data.iter());
+                }                
+                data_dst.serialize(&mut *buffer_data)?;
             }
-        }; */
+        };
         Ok(())
     }
 }

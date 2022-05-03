@@ -11,4 +11,11 @@ pub struct AuthorizedEcho {
     pub data: Vec<u8>,
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
+pub struct VendingMachineEcho {
+    pub bump_seed: u8,
+    pub price: u64,
+    pub data: Vec<u8>,
+}
+
 

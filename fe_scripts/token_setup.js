@@ -79,8 +79,8 @@ const main = async () => {
 
 
     console.log("Sending 50X to user's TokenAccount...");
-    await mintX.mintTo(userTokenAccount, clientKeypair.publicKey, [], 50);
-    UTA = (await connection.getParsedAccountInfo(userTokenAccount));
+    // await mintX.mintTo(userTokenAccount, clientKeypair.publicKey, [], 50);
+    // UTA = (await connection.getParsedAccountInfo(userTokenAccount));
 
     console.log("✨Setup complete✨\n");
 };
