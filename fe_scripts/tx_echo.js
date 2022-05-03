@@ -183,6 +183,64 @@ const main = async () => {
             preflightCommitment: "confirmed",
             confirmation: "confirmed",
         });
+    } else if (ix_ID == 3) {
+        const userAccount = getKeypair(`userAccount`);
+        let userPubkey = userAccount.publicKey;
+        let vendingMachineMintAccount = getKeypair(`mint_vmt`);
+
+
+        // funding userAccount
+        if (await connection.getBalance(userPubkey) < LAMPORTS_PER_SOL) {
+            console.log("Requesting SOL for user...");
+            const userPubkeyAirdropSignature = await connection.requestAirdrop(userPubkey, LAMPORTS_PER_SOL * 2);
+            await connection.confirmTransaction(userPubkeyAirdropSignature);
+            console.log("Done");
+        }
+
+        // create PDA for VendingMachineEcho
+        let price = new ArrayBuffer(8);
+        new DataView(price).setBigUint64(0, args[3].map(Number), true);
+        let bufferSeedArray = [Buffer.from('vending_machine'), Buffer.from(vendingMachineMintAccount.toBytes()), Buffer.from(price)];
+        [vendingMachineBufferAccountPubkey, bumpSeed] = await PublicKey.findProgramAddress(
+            bufferSeedArray,
+            programId
+        );
+        console.log("vendingMachineAccountPubkey is : ", vendingMachineBufferAccountPubkey.toBase58());
+
+         ix_createVendingMachineBufferAccountPubkeyBufferAccount = SystemProgram.createAccount({
+            fromPubkey: userPubkey,
+            newAccountPubkey: vendingMachineBufferAccountPubkey,
+            space : 153, // 1 + 8 + 4 + 140
+            lamports: await connection.getMinimumBalanceForRentExemption(153),
+            programId: programId
+        }); 
+
+        let tx = new Transaction();
+        let signers = [userAccount];
+        data = Buffer.concat([
+            Buffer.from(new Uint8Array([3])),
+            Buffer.from(price),
+            Buffer.from(new Uint8Array([153, 0, 0, 0, 0, 0, 0, 0]))
+        ]);
+        
+        let createAndInitialteAuthorizedBufferAccountIx = new TransactionInstruction({
+            programId: programId,
+            keys: [
+                { pubkey: userPubkey, isSigner: true, isWritable: false },
+                { pubkey: vendingMachineBufferAccountPubkey, isSigner: false, isWritable: true },
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false}
+            ],
+            data: data
+        });
+        writePublicKey(vendingMachineBufferAccountPubkey, "vendingMachineBufferAccount")
+        tx.add(createAndInitialteAuthorizedBufferAccountIx);
+
+        await sendAndConfirmTransaction(connection, tx, signers, {
+            skipPreflight: true,
+            preflightCommitment: "confirmed",
+            confirmation: "confirmed",
+        });
+        data = (await connection.getAccountInfo(bufferAccountPubkey)).data;  
     }
 };
 

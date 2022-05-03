@@ -5,15 +5,15 @@ use solana_program::{
     msg,
     program::invoke_signed,
     program_error::ProgramError,
-    program_pack::{IsInitialized, Pack},
+    program_pack::Pack,
     pubkey::Pubkey,
     system_instruction,
     sysvar::rent::Rent,
 };
 use spl_token::{
-    instruction::{approve, burn, close_account, initialize_mint, mint_to, transfer},
+    instruction::{burn/* , approve, close_account, initialize_mint, mint_to, transfer */},
     state::Account,
-    state::Mint,
+    /* state::Mint, */
 };
 
 use crate::{
@@ -283,8 +283,6 @@ impl Processor {
         // Check Authority
         msg!("Vender Machine and Payer Check...");
         {
-            let buffer_data = vending_machine_buffer.data.borrow_mut();
-
             let price_ = &data[..8];
             msg!("bump_seed : {:?}; price : {:?};", bump_seed, price_);
 
@@ -369,7 +367,7 @@ impl Processor {
                 data_dst.serialize(&mut *buffer_data)?;
             }
             Some(_usize) => {
-                msg!("reset Buffer Account and Write data");
+                msg!("reset Buffer Account Data and Write data");
                 data_dst.data = vec!();
                 if data.len() > 140 {
                     data_dst.data.extend(data[..140].iter());
