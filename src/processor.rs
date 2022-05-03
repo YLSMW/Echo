@@ -5,9 +5,15 @@ use solana_program::{
     msg,
     program::invoke_signed,
     program_error::ProgramError,
+    program_pack::{IsInitialized, Pack},
     pubkey::Pubkey,
     system_instruction,
     sysvar::rent::Rent,
+};
+use spl_token::{
+    instruction::{approve, burn, close_account, initialize_mint, mint_to, transfer},
+    state::Account,
+    state::Mint,
 };
 
 use crate::{
@@ -38,21 +44,18 @@ impl Processor {
                 msg!("Instruction: InitializeAuthorizedEcho");
                 Self::initialize_authorized_echo(program_id, accounts, buffer_seed, buffer_size)
             }
-            EchoInstruction::AuthorizedEcho{ data } => {
+            EchoInstruction::AuthorizedEcho { data } => {
                 msg!("Instruction: AuthorizedEcho");
                 Self::authorized_echo(program_id, accounts, data)
-              },
-            EchoInstruction::InitializeVendingMachineEcho{
-                  price,
-                  buffer_size,
-              } => {
-                  msg!("Instruction: InitializeVendingMachineEcho");
-                  Self::initialize_vending_machine_echo(program_id, accounts, price, buffer_size)
-              },
+            }
+            EchoInstruction::InitializeVendingMachineEcho { price, buffer_size } => {
+                msg!("Instruction: InitializeVendingMachineEcho");
+                Self::initialize_vending_machine_echo(program_id, accounts, price, buffer_size)
+            }
             EchoInstruction::VendingMachineEcho { data } => {
-                  msg!("Instruction: VendingMachineEcho");
-                  Self::vending_machine_echo(program_id, accounts, data)
-              }, 
+                msg!("Instruction: VendingMachineEcho");
+                Self::vending_machine_echo(program_id, accounts, data)
+            }
         }
     }
     fn process_echo_instruction(
@@ -126,7 +129,9 @@ impl Processor {
         msg!("Authorized BufferAccount Created...");
         let data_dst = &mut *authorized_buffer.data.borrow_mut();
 
-        let data: Vec<u8> = [bump_seed].iter().copied()
+        let data: Vec<u8> = [bump_seed]
+            .iter()
+            .copied()
             .chain(buffer_seed.to_le_bytes().iter().copied())
             .chain(0u32.to_le_bytes().iter().copied())
             .collect();
@@ -141,7 +146,7 @@ impl Processor {
     fn authorized_echo(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        data: Vec<u8>
+        data: Vec<u8>,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let authority = next_account_info(account_info_iter)?;
@@ -152,17 +157,20 @@ impl Processor {
         msg!("Authority Check...");
         let bump_seed_ = buffer_data[0];
         let buffer_seed = &buffer_data[1..9];
-        msg!("bump_seed : {:?}; buffer_seed : {:?};", bump_seed_, buffer_seed);
+        msg!(
+            "bump_seed : {:?}; buffer_seed : {:?};",
+            bump_seed_,
+            buffer_seed
+        );
 
         let (authorized_buffer_key, bump_seed) = Pubkey::find_program_address(
-            &[
-                b"authority",
-                authority.key.as_ref(),
-                buffer_seed,
-            ],
+            &[b"authority", authority.key.as_ref(), buffer_seed],
             program_id,
         );
-        if bump_seed != bump_seed_ || authorized_buffer_key != *authorized_buffer.key || !authority.is_signer {
+        if bump_seed != bump_seed_
+            || authorized_buffer_key != *authorized_buffer.key
+            || !authority.is_signer
+        {
             msg!("Authority Check Failed");
             return Err(EchoError::AuthorityCheckFailed.into());
         }
@@ -183,7 +191,7 @@ impl Processor {
                     data_dst.data.extend(data[..140].iter());
                 } else {
                     // data_dst.data.extend((data.len() as u32).to_le_bytes().iter().copied());
-                    data_dst.data.extend(data.iter());                    
+                    data_dst.data.extend(data.iter());
                 }
                 msg!("data written into echo_buffer account");
 
@@ -201,7 +209,7 @@ impl Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         price: u64,
-        buffer_size: usize,        
+        buffer_size: usize,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let vending_machine_buffer = next_account_info(account_info_iter)?;
@@ -216,7 +224,7 @@ impl Processor {
             ],
             program_id,
         );
-        let  rent = Rent::default();
+        let rent = Rent::default();
 
         let create_vending_machine_buffer_account_ix = system_instruction::create_account(
             payer.key,
@@ -245,7 +253,9 @@ impl Processor {
         msg!("VendingMachine BufferAccount Created...");
         let data_dst = &mut *vending_machine_buffer.data.borrow_mut();
 
-        let data: Vec<u8> = [bump_seed].iter().copied()
+        let data: Vec<u8> = [bump_seed]
+            .iter()
+            .copied()
             .chain(price.to_le_bytes().iter().copied())
             .chain(0u32.to_le_bytes().iter().copied())
             .collect();
@@ -254,14 +264,13 @@ impl Processor {
 
         data.serialize(data_dst)?;
         msg!("data head written into echo_buffer account");
-       
         Ok(())
     }
 
     fn vending_machine_echo(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        data: Vec<u8>
+        data: Vec<u8>,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let vending_machine_buffer = next_account_info(account_info_iter)?;
@@ -270,28 +279,48 @@ impl Processor {
         let vending_machine_mint = next_account_info(account_info_iter)?;
         let token_program = next_account_info(account_info_iter)?;
 
-        let mut buffer_data = vending_machine_buffer.data.borrow_mut();
-
         // Check Authority
-        msg!("Payer and Vender Machine Check...");
-        let bump_seed_ = buffer_data[0];
-        let price = &buffer_data[1..9];
-        msg!("bump_seed : {:?}; price : {:?};", bump_seed_, price);
+        msg!("Vender Machine and Payer Check...");
+        {
+            let buffer_data = vending_machine_buffer.data.borrow_mut();
+            let bump_seed_ = buffer_data[0];
+            let price_ = &buffer_data[1..9];
+            let price = &data[..8];
+            msg!("bump_seed : {:?}; price : {:?};", bump_seed_, price_);
 
-        let (vending_machine_buffer_pubkuy, bump_seed) = Pubkey::find_program_address(
-            &[
-                b"vending_machine",
-                vending_machine_mint.key.as_ref(),
-                price,
-            ],
-            program_id,
-        );
-        if bump_seed != bump_seed_  || *vending_machine_buffer.key != vending_machine_buffer_pubkuy {
-            msg!("Vending Machine Check Failed");
-            return Err(EchoError::AuthorityCheckFailed.into());
-        }
+            let (vending_machine_buffer_pubkuy, bump_seed) = Pubkey::find_program_address(
+                &[b"vending_machine", vending_machine_mint.key.as_ref(), price],
+                program_id,
+            );
+            if bump_seed != bump_seed_
+                || *vending_machine_buffer.key != vending_machine_buffer_pubkuy
+            {
+                msg!("Vending Machine Check Failed : Can't locate the veding machine");
+                return Err(EchoError::AuthorityCheckFailed.into());
+            }
 
-        /* if 
+            if !user.is_signer || token_program.is_signer {
+                msg!("Vending Machine Check Failed : singer missing");
+                return Err(EchoError::AuthorityCheckFailed.into());
+            }
+            let user_token_account_info =
+                Account::unpack_from_slice(&user_token.data.borrow_mut()[..])?;
+            if *user.key != user_token_account_info {
+                msg!("Payer and Token Account Mismatched");
+                return Err(EchoError::AuthorityCheckFailed.into());
+            }
+            if user_token_account_info.mint != *vending_machine_mint.key {
+                msg!("Vending Machine Check Failed : Wrong token");
+                return Err(EchoError::AuthorityCheckFailed.into());
+            }
+            if user_token_account_info.amount < u64::from_le_bytes(price.try_into().unwrap()) {
+                msg!("Insufficient Tokens");
+                return Err(ProgramError::InsufficientFunds.into());
+            }
+        };
+        msg!("Vender Machine and Payer validated.");
+
+        /* if
 
         msg!("Authority Check");
 
@@ -310,7 +339,7 @@ impl Processor {
                     data_dst.data.extend(data[..140].iter());
                 } else {
                     // data_dst.data.extend((data.len() as u32).to_le_bytes().iter().copied());
-                    data_dst.data.extend(data.iter());                    
+                    data_dst.data.extend(data.iter());
                 }
                 msg!("data written into echo_buffer account");
 

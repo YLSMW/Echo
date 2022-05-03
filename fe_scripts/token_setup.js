@@ -2,7 +2,7 @@ import { Connection, sendAndConfirmTransaction, Keypair, Transaction, SystemProg
 
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-import { getKeypair, getPublicKey, writePublicKey, writePrivateKey, fileExists } from "./utils.js";
+import { getKeypair, writePublicKey, writePrivateKey, fileExists, getTokenBalance } from "./utils.js";
 
 
 const createMint = (
@@ -44,7 +44,7 @@ const main = async () => {
 
     if (fileExists(`../keys/userAccount.json`)) {
         console.log("using existing user info");
-        var userKeypair = getKeypair("userAccount");        
+        var userKeypair = getKeypair("userAccount");
     } else {
         console.log("creating new user account...");
         var userKeypair = new Keypair();
@@ -57,7 +57,7 @@ const main = async () => {
 
     if (fileExists(`../keys/tokenClientAccount.json`)) {
         console.log("using existing token client info");
-        var clientKeypair = getKeypair("tokenClientAccount");        
+        var clientKeypair = getKeypair("tokenClientAccount");
     } else {
         console.log("creating new token client account...");
         var clientKeypair = new Keypair();
@@ -74,8 +74,14 @@ const main = async () => {
         userKeypair.publicKey,
         clientKeypair
     );
+    // UTA = await connection.getTokenAccountsByOwner(userKeypair.publicKey, { "mint": mintX.publicKey });
+    let UTA = (await connection.getTokenAccountBalance(userTokenAccount));
+
+
     console.log("Sending 50X to user's TokenAccount...");
     await mintX.mintTo(userTokenAccount, clientKeypair.publicKey, [], 50);
+    UTA = (await connection.getParsedAccountInfo(userTokenAccount));
+
     console.log("✨Setup complete✨\n");
 };
 

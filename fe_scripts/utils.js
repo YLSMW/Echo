@@ -43,6 +43,6 @@ export const getTokenBalance = async (
     connection
 ) => {
     return parseInt(
-        (await connection.getTokenAccountBalance(pubkey)).value.amount
+        (await connection.getTokenAccountBalance(pubkey)).value
     );
 };
