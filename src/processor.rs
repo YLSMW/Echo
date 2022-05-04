@@ -280,10 +280,9 @@ impl Processor {
         let bump_seed = buffer_data[0];
         let price = &buffer_data[1..9];
         // Check Authority
-        msg!("Vender Machine and Payer Check...");
+        msg!("Vender Machine and Payer Check......");
         {
-            let price_ = &data[..8];
-            msg!("bump_seed : {:?}; price : {:?};", bump_seed, price_);
+            msg!("bump_seed : {:?}; price : {:?};", bump_seed, u64::from_le_bytes(price.try_into().unwrap()));
 
             let (vending_machine_buffer_pubkuy, bump_seed_) = Pubkey::find_program_address(
                 &[b"vending_machine", vending_machine_mint.key.as_ref(), price],

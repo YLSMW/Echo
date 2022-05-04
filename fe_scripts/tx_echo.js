@@ -231,10 +231,10 @@ const main = async () => {
         // to be continued
         const userAccount = getKeypair(`userAccount`);
         let userPubkey = userAccount.publicKey;
-        let vendingMachineBufferAccountPubkey = getPublicKey("vendingMachineBufferAccountPubkey");
-        let userTokenPubkey = getPublicKey("userVMT");
+        let vendingMachineBufferAccountPubkey = getPublicKey("vendingMachineBufferAccount");
+        let vendingMachineMintAccountPubkey = getPublicKey("mintVMT");
+        let userTokenAccountPubkey = getPublicKey("userVMT");
         let tokenProgramPubkey = TOKEN_PROGRAM_ID;
-        let price = Buffer.from(args[3].split(",").map(Number));
         let uservec = Buffer.from(args[4].split(",").map(Number));
         let userveclen = new ArrayBuffer(4);
         new DataView(userveclen).setUint32(0, uservec.length, true);
@@ -243,16 +243,16 @@ const main = async () => {
             Buffer.from(userveclen),
             uservec,
         ]);
-
+        console.log("TOKEN_PROGRAM_ID : ", TOKEN_PROGRAM_ID.toBase58())
         let tx = new Transaction();
-        let signers = [userAccount]
+        let signers = [userAccount];
         let writeTovendingMachineBufferAccountIx = new TransactionInstruction({
             programId: programId,
             keys: [
                 { pubkey: vendingMachineBufferAccountPubkey, isSigner: false, isWritable: true },
                 { pubkey: userPubkey, isSigner: true, isWritable: false },
-                { pubkey: userTokenPubkey, isSigner: false, isWritable: true },
-                { pubkey: vendingMachineMintAccount, isSigner: false, isWritable: true },
+                { pubkey: userTokenAccountPubkey, isSigner: false, isWritable: true },
+                { pubkey: vendingMachineMintAccountPubkey, isSigner: false, isWritable: true },
                 { pubkey: tokenProgramPubkey, isSigner: false, isWritable: false },                               
             ],
             data: data
