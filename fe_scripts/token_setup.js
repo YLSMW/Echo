@@ -30,10 +30,10 @@ const setupMint = async (
 ) => {
     console.log(`Creating Mint ${name}...`);
     const mint = await createMint(connection, clientKeypair);
-    writePublicKey(mint.publicKey, `mint_${name.toLowerCase()}`);
+    writePublicKey(mint.publicKey, `mint${name}`);
     console.log(`Creating user TokenAccount for ${name}...`);
     const userTokenAccount = await mint.createAccount(userPublicKey);
-    writePublicKey(userTokenAccount, `user_${name.toLowerCase()}`);
+    writePublicKey(userTokenAccount, `user${name}`);
     return [mint, userTokenAccount];
 };
 
@@ -79,7 +79,7 @@ const main = async () => {
 
 
     console.log("Sending 50X to user's TokenAccount...");
-    // await mintX.mintTo(userTokenAccount, clientKeypair.publicKey, [], 50);
+    await mintX.mintTo(userTokenAccount, clientKeypair.publicKey, [], 50);
     // UTA = (await connection.getParsedAccountInfo(userTokenAccount));
 
     console.log("✨Setup complete✨\n");

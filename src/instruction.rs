@@ -1,13 +1,12 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
-
 #[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
 pub enum EchoInstruction {
     // Required
     Echo {
         data: Vec<u8>,
     },
-     // Highly Recommended
+    // Highly Recommended
     InitializeAuthorizedEcho {
         buffer_seed: u64,
         buffer_size: usize,
@@ -23,8 +22,7 @@ pub enum EchoInstruction {
         buffer_size: usize,
     },
     // Optional
-   VendingMachineEcho {
+    VendingMachineEcho {
         data: Vec<u8>,
-    }, 
+    },
 }
-

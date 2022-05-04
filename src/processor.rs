@@ -275,7 +275,6 @@ impl Processor {
         let user = next_account_info(account_info_iter)?;
         let user_token = next_account_info(account_info_iter)?;
         let vending_machine_mint = next_account_info(account_info_iter)?;
-        let token_program_account = next_account_info(account_info_iter)?;
         let system_token_program = next_account_info(account_info_iter)?;
         let mut buffer_data = vending_machine_buffer.data.borrow_mut();
         let bump_seed = buffer_data[0];
@@ -297,7 +296,7 @@ impl Processor {
                 return Err(EchoError::AuthorityCheckFailed.into());
             }
 
-            if !user.is_signer || token_program_account.is_signer {
+            if !user.is_signer {
                 msg!("Vending Machine Check Failed : singer missing");
                 return Err(EchoError::AuthorityCheckFailed.into());
             }
@@ -320,11 +319,11 @@ impl Processor {
 
         // Pay
         let create_token_burn_ix = burn(
-            token_program_account.key,
+            system_token_program.key,
             user_token.key,
             vending_machine_mint.key,
-            token_program_account.key,
-            &[&token_program_account.key],
+            user.key,
+            &[&user.key],
             u64::from_le_bytes(price.try_into().unwrap()),
         )?;
 
@@ -333,10 +332,9 @@ impl Processor {
             &create_token_burn_ix,
             &[
                 system_token_program.clone(),
-                token_program_account.clone(),
                 user_token.clone(),
                 vending_machine_mint.clone(),
-                token_program_account.clone(),
+                user.clone(),
             ],
         )?;        
 

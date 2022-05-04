@@ -1,7 +1,6 @@
 import { Connection, sendAndConfirmTransaction, Keypair, Transaction, SystemProgram, PublicKey, TransactionInstruction, LAMPORTS_PER_SOL } from "@solana/web3.js";
-
 import { getKeypair, getPublicKey, writePublicKey, writePrivateKey } from "./utils.js";
-
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 const main = async () => {
     // args[0]: ix id: 0 echo; 1 initialize authorized echo; ...
@@ -26,12 +25,8 @@ const main = async () => {
         console.log("Done");
 
         // Save userAccount keypair.
-
         writePublicKey(userAccountPubkey, "userAccount");
-
         writePrivateKey(userAccount.secretKey, "userAccount");
-
-        // userAccountPubkey = getKeypair("userAccount");
 
         let tx = new Transaction();
         let signers = [userAccount];
@@ -64,7 +59,6 @@ const main = async () => {
         new DataView(len).setUint32(0, uservec.length, true);
 
         let data = Buffer.concat([Buffer.from(new Uint8Array([0])), Buffer.from(len), uservec])
-        //data =  Buffer.from(new Uint8Array([0,4,0,0,0,1,2,3,4]));
         let writeIx = new TransactionInstruction({
             programId: programId,
             keys: [
@@ -110,7 +104,7 @@ const main = async () => {
         );
         console.log("bufferAccountPubkey is : ", bufferAccountPubkey.toBase58());
 
-/*          // This is done on protocol side.
+        /*  // This is done on protocol side.
             const ix_createAuthorizedBufferAccount = SystemProgram.createAccount({
             fromPubkey: authorityPubkey,
             newAccountPubkey: bufferAccountPubkey,
@@ -143,8 +137,7 @@ const main = async () => {
             skipPreflight: true,
             preflightCommitment: "confirmed",
             confirmation: "confirmed",
-        });
-        data = (await connection.getAccountInfo(bufferAccountPubkey)).data;        
+        });   
 
     } else if (ix_ID == 2) {
         const authorityName = args[2].toString();
@@ -160,7 +153,7 @@ const main = async () => {
         }
 
         let uservec = Buffer.from(args[3].split(",").map(Number));
-        userveclen = new ArrayBuffer(4);
+        let userveclen = new ArrayBuffer(4);
         new DataView(userveclen).setUint32(0, uservec.length, true);
         let data = Buffer.concat([
             Buffer.from(new Uint8Array([2])),
@@ -168,7 +161,7 @@ const main = async () => {
             uservec,
         ]);
 
-        tx = new Transaction();
+        let tx = new Transaction();
         let signers = [authorityAccount]
         let writeToAuthorizedBufferAccountIx = new TransactionInstruction({
             programId: programId,
@@ -187,8 +180,7 @@ const main = async () => {
     } else if (ix_ID == 3) {
         const userAccount = getKeypair(`userAccount`);
         let userPubkey = userAccount.publicKey;
-        let vendingMachineMintAccount = getPublicKey(`mint_vmt`);
-
+        let vendingMachineMintAccount = getPublicKey(`mintVMT`);
 
         // funding userAccount
         if (await connection.getBalance(userPubkey) < LAMPORTS_PER_SOL) {
@@ -237,38 +229,35 @@ const main = async () => {
         writePublicKey(vendingMachineBufferAccountPubkey, "vendingMachineBufferAccount")
     } else if (ix_ID == 4) {
         // to be continued
-        const authorityName = args[2].toString();
-        const authorityAccount = getKeypair(authorityName);
-        let authorityPubkey = authorityAccount.publicKey;
-        let bufferAccountPubkey = getPublicKey("authorizedBufferAccount");
-        // funding authorityAccount
-        if (await connection.getBalance(authorityPubkey) < LAMPORTS_PER_SOL) {
-            console.log("Requesting SOL for authority...");
-            const authorityPubkeyAirdropSignature = await connection.requestAirdrop(authorityPubkey, LAMPORTS_PER_SOL * 2);
-            await connection.confirmTransaction(authorityPubkeyAirdropSignature);
-            console.log("Done");
-        }
-
-        let uservec = Buffer.from(args[3].split(",").map(Number));
-        userveclen = new ArrayBuffer(4);
+        const userAccount = getKeypair(`userAccount`);
+        let userPubkey = userAccount.publicKey;
+        let vendingMachineBufferAccountPubkey = getPublicKey("vendingMachineBufferAccountPubkey");
+        let userTokenPubkey = getPublicKey("userVMT");
+        let tokenProgramPubkey = TOKEN_PROGRAM_ID;
+        let price = Buffer.from(args[3].split(",").map(Number));
+        let uservec = Buffer.from(args[4].split(",").map(Number));
+        let userveclen = new ArrayBuffer(4);
         new DataView(userveclen).setUint32(0, uservec.length, true);
         let data = Buffer.concat([
-            Buffer.from(new Uint8Array([2])),
+            Buffer.from(new Uint8Array([4])),
             Buffer.from(userveclen),
             uservec,
         ]);
 
-        tx = new Transaction();
-        let signers = [authorityAccount]
-        let writeToAuthorizedBufferAccountIx = new TransactionInstruction({
+        let tx = new Transaction();
+        let signers = [userAccount]
+        let writeTovendingMachineBufferAccountIx = new TransactionInstruction({
             programId: programId,
             keys: [
-                { pubkey: authorityPubkey, isSigner: true, isWritable: false },
-                { pubkey: bufferAccountPubkey, isSigner: false, isWritable: true },
+                { pubkey: vendingMachineBufferAccountPubkey, isSigner: false, isWritable: true },
+                { pubkey: userPubkey, isSigner: true, isWritable: false },
+                { pubkey: userTokenPubkey, isSigner: false, isWritable: true },
+                { pubkey: vendingMachineMintAccount, isSigner: false, isWritable: true },
+                { pubkey: tokenProgramPubkey, isSigner: false, isWritable: false },                               
             ],
             data: data
         });
-        tx.add(writeToAuthorizedBufferAccountIx);
+        tx.add(writeTovendingMachineBufferAccountIx);
         await sendAndConfirmTransaction(connection, tx, signers, {
             skipPreflight: true,
             preflightCommitment: "confirmed",
