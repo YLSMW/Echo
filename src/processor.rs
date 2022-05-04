@@ -3,7 +3,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
-    program::invoke_signed,
+    program::{invoke_signed, invoke},
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
@@ -329,7 +329,7 @@ impl Processor {
         )?;
 
         msg!("Conduct Payment...");
-        invoke_signed(
+        invoke(
             &create_token_burn_ix,
             &[
                 system_token_program.clone(),
@@ -338,12 +338,6 @@ impl Processor {
                 vending_machine_mint.clone(),
                 token_program_account.clone(),
             ],
-            &[&[
-                &b"vending_machine"[..],
-                vending_machine_mint.key.as_ref(),
-                price,
-                &[bump_seed],
-            ]],
         )?;        
 
         // Service
