@@ -54,7 +54,7 @@ const main = async () => {
             tx.add(createIx);
         }
 
-        // This is so ugly. 
+        // This is STILL so ugly. 
         let len = new ArrayBuffer(4);
         new DataView(len).setUint32(0, uservec.length, true);
 
@@ -77,8 +77,6 @@ const main = async () => {
             preflightCommitment: "confirmed",
             confirmation: "confirmed",
         });
-        data = (await connection.getAccountInfo(bufferAccountPubkey)).data;
-
         console.log("Buffer Key:", bufferAccountPubkey.toBase58());
 
     } else if (ix_ID == 1) {
@@ -115,7 +113,7 @@ const main = async () => {
 
         let tx = new Transaction();
         let signers = [authorityAccount];
-        data = Buffer.concat([
+        let data = Buffer.concat([
             Buffer.from(new Uint8Array([1])),
             Buffer.from(buffer_seed.split(",").map(Number)),
             Buffer.from(new Uint8Array([153, 0, 0, 0, 0, 0, 0, 0]))
